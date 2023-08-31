@@ -126,9 +126,11 @@ def train(
         y_out_test = np.append(y_out_test, normalizer.unscale_y(outputs_dml.detach().numpy()), axis=0)
         x_test_shuffled = np.append(x_test_shuffled, normalizer.unscale_x(inputs.detach().numpy()), axis=0)
     print('Test Error DML:', test_error_dml)
+    """
     plt.scatter(x_test_shuffled, y_out_test, s=.1)
     plt.scatter(x_test, y_test, s=.1)
     plt.show()
+    """
     return test_error_dml
 
 
