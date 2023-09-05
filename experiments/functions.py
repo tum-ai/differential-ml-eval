@@ -1,4 +1,5 @@
 import jax.numpy as jnp
+import matplotlib.pyplot as plt
 
 from jax import grad
 from jax import random
@@ -25,14 +26,17 @@ class FunctionGenerator:
 
         return x.reshape(-1, self.n_dim), y.reshape(-1, 1), dydx.reshape(-1, self.n_dim)
 
-    def generate_step_function_data(self, nsteps):
-        x = jnp.random.uniform(-10, 10, size=(self.n_samples, self.n_dim))
+    def generate_step_function_data(self, n_steps):
+        x_key = random.PRNGKey(5678)
+        step_point_key, step_value_key = random.split(x_key)
+        x = random.uniform(x_key, shape=(self.n_samples, self.n_dim))
         y = jnp.zeros(self.n_samples)
         dydx = jnp.array([jnp.zeros(self.n_dim) for _ in range(self.n_samples)])
-        step_points = sorted(jnp.random.uniform(-10, 10, size=nsteps))
-        step_values = sorted(jnp.random.uniform(-10, 10, size=nsteps))
+        step_points = jnp.sort(random.uniform(step_point_key, shape=(n_steps,)))
+        step_values = jnp.sort(random.uniform(step_value_key, shape=(n_steps,)))
         for i, point in enumerate(x):
-            y[i] = sum([step_values[jnp.argmax(step_points > dim)] for dim in point])
+            #return the value of the step function at the first index larger than the current point
+            y = y.at[i].set(sum([step_values[jnp.argmax(step_points > dim)] for dim in point]))
 
         return x.reshape(-1, self.n_dim), y.reshape(-1, 1), dydx.reshape(-1, self.n_dim)
 
@@ -43,4 +47,7 @@ class FunctionGenerator:
                       + alpha * jnp.sin(x[dim]) * 10 ** (polynomial_degree - dim)
                       for dim in range(len(x))])
        )
+
+gen = FunctionGenerator(100, 4)
+x, y, dydx = gen.generate_step_function_data(10)
 
