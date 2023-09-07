@@ -39,6 +39,24 @@ class FunctionGenerator:
 
         return x.reshape(-1, self.n_dim), y.reshape(-1, 1), dydx.reshape(-1, self.n_dim)
 
+    def generate_half_step_half_continuous(self, key: random.PRNGKey, polynomial_degree: int) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+        fold_points = random.uniform(key, shape=(self.n_dim, )) #points where the function folds, where values < fold_points are 0
+        x = random.uniform(key, shape=(self.n_samples, self.n_dim))
+        #setting points where x[i][j] < fold_points[j] to 0
+        x = jnp.where(x < fold_points, 0, x)
+        y = jnp.zeros(self.n_samples)
+        dydx = jnp.array([jnp.zeros(self.n_dim) for _ in range(self.n_samples)])
+        alpha = random.uniform(key, shape=(self.n_dim,))
+        gradient = grad(FunctionGenerator.polynomial_and_trigonometric_function)
+
+        for i, point in enumerate(x):
+            fx = FunctionGenerator.polynomial_and_trigonometric_function(point, alpha, polynomial_degree)
+            y = y.at[i].set(fx)
+            dydx = dydx.at[i].set(gradient(point, alpha, polynomial_degree))
+
+        return x.reshape(-1, self.n_dim), y.reshape(-1, 1), dydx.reshape(-1, self.n_dim)
+
+
     def generate_n_datasets(self, n_datasets: int, function_type: Callable[[random.PRNGKey, int], Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]]) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
         x = []
         y = []
@@ -59,11 +77,12 @@ class FunctionGenerator:
                       for dim in range(len(x))])
        )
 
-gen = FunctionGenerator(100, 1)
-x, y, dydx = gen.generate_n_datasets(3, gen.generate_trigonometric_polynomial_data)
-print(len(x), len(y), len(dydx))
-print(x[0].shape, y[0].shape, dydx[0].shape)
-print(x[0][0], y[0][0], dydx[0][0])
+# gen = FunctionGenerator(100, 2)
+# x, y, dydx = gen.generate_n_datasets(3, gen.generate_half_step_half_continuous)
+# x, y, dydx = gen.generate_n_datasets(3, gen.generate_trigonometric_polynomial_data)
+# print(len(x), len(y), len(dydx))
+# print(x[0].shape, y[0].shape, dydx[0].shape)
+# print(x[0][0], y[0][0], dydx[0][0])
 
 
 
