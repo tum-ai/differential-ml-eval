@@ -1,3 +1,6 @@
 jax
+jaxlib
 optuna
 optuna-dashboard
+black
+seaborn
