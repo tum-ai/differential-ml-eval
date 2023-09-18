@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+import numpy as np
 
 from jax import grad
 from typing import Callable
@@ -9,13 +10,12 @@ from functions.function_classes import polynomial_and_trigonometric_function
 
 
 class FunctionGenerator:
-    def __init__(self, n_samples: int, n_dim: int):
-        self.n_samples = n_samples
+    def __init__(self, n_dim: int):
         self.n_dim = n_dim
 
     def generate_trigonometric_polynomial_data(
-        self, key: jax.random.PRNGKey, polynomial_degree: int, alpha: float, frequency: float,
-    ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+        self, n_samples: int, key: jax.random.PRNGKey, polynomial_degree: int, alpha: float, frequency: float,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Generate data from a polynomial modulated with a trigonometric function.
 
@@ -27,7 +27,7 @@ class FunctionGenerator:
         """
         x = jax.random.uniform(
             key,
-            shape=(self.n_samples, self.n_dim),
+            shape=(n_samples, self.n_dim),
             minval=-1,
             maxval=1,
         )
@@ -57,7 +57,7 @@ class FunctionGenerator:
             frequency,
         )
 
-        return x, y, dydx
+        return np.asarray(x), np.asarray(y.reshape(-1, 1)), np.asarray(dydx)
 
     def _compute_coefficients_polynomial(self, key: jax.random.PRNGKey, polynomial_degree: int):
         """
@@ -78,11 +78,11 @@ class FunctionGenerator:
         return random_coefficients
 
     def generate_step_function_data(
-        self, key: jax.random.PRNGKey, n_steps: int,
+        self, n_samples: int, key: jax.random.PRNGKey, n_steps: int,
     ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
         step_point_key, step_value_key = jax.random.split(key)
-        x = jax.random.uniform(key, shape=(self.n_samples, self.n_dim))
-        y = jnp.zeros(self.n_samples)
+        x = jax.random.uniform(key, shape=(n_samples, self.n_dim))
+        y = jnp.zeros(n_samples)
         dydx = jnp.array([jnp.zeros(self.n_dim) for _ in range(self.n_samples)])
         step_points = jnp.sort(jax.random.uniform(step_point_key, shape=(n_steps,)))
         step_values = jnp.sort(jax.random.uniform(step_value_key, shape=(n_steps,)))
@@ -95,17 +95,17 @@ class FunctionGenerator:
         return x.reshape(-1, self.n_dim), y.reshape(-1, 1), dydx.reshape(-1, self.n_dim)
 
     def generate_half_step_half_continuous(
-        self, key: jax.random.PRNGKey, polynomial_degree: int,  alpha: float, frequency: float,
+        self, n_samples: int, key: jax.random.PRNGKey, polynomial_degree: int,  alpha: float, frequency: float,
     ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
-        x = jax.random.uniform(key, shape=(self.n_samples, self.n_dim))
+        x = jax.random.uniform(key, shape=(n_samples, self.n_dim))
         fold_points = jax.random.uniform(
             key, shape=(self.n_dim,)
         )  # points where the function folds, where values < fold_points are 0
         # setting points where x[i][j] < fold_points[j] to 0
         x = jnp.where(x < fold_points, 0, x)
-        y = jnp.zeros(self.n_samples)
+        y = jnp.zeros(n_samples)
         random_coefficients = self._compute_coefficients_polynomial(key, polynomial_degree)
-        dydx = jnp.array([jnp.zeros(self.n_dim) for _ in range(self.n_samples)])
+        dydx = jnp.array([jnp.zeros(self.n_dim) for _ in range(n_samples)])
         gradient = grad(polynomial_and_trigonometric_function)
 
         for i, point in enumerate(x):
