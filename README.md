@@ -11,11 +11,22 @@ cd ..
 ```
 
 More information about git submodules: https://devconnected.com/how-to-add-and-update-git-submodules/
-### Installation of requirements
+
+### Setting up the virtual environment with Python 3.11.0
+
+Assumes a working installation of [pyenv](https://github.com/pyenv/pyenv) and [poetry](https://github.com/python-poetry/poetry)
 
 ```bash
-pip install -r requirements.txt
-cd differential_ml && pip install -r requirements.txt && cd ..
+pyenv install 3.11.0
+pyenv virtualenv 3.11.0 differential-ml-eval
+pyenv local differential-ml-eval
+```
+
+### Installing dependencies
+
+```bash
+poetry install
+cd differential_ml && poetry install
 ```
 
 Test if it works
@@ -24,4 +35,7 @@ python3 example_problem.py
 ```
 
 ## Start Optuna Dashboard
+```bash
+cd experiments
 optuna-dashboard sqlite:///db.sqlite3
+```
