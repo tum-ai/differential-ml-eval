@@ -6,7 +6,7 @@ from jax import grad
 from typing import Callable
 from typing import Tuple
 
-from functions.function_classes import polynomial_and_trigonometric_function
+from functions.function_classes import polynomial_and_trigonometric_function, black_scholes, black_scholes_delta
 
 
 class FunctionGenerator:
@@ -14,7 +14,7 @@ class FunctionGenerator:
         self.n_dim = n_dim
 
     def generate_trigonometric_polynomial_data(
-        self, n_samples: int, key: jax.random.PRNGKey, polynomial_degree: int, alpha: float, frequency: float,
+            self, n_samples: int, key: jax.random.PRNGKey, polynomial_degree: int, alpha: float, frequency: float,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Generate data from a polynomial modulated with a trigonometric function.
@@ -77,8 +77,65 @@ class FunctionGenerator:
         ) * jnp.array([0.9 ** i for i in range(polynomial_degree + 1)])
         return random_coefficients
 
+    def generate_black_scholes_dataset(self, m: int):
+        lower = 10
+        upper = 200
+        sigma = 0.2
+        K = 110
+        T = 2
+        x = np.linspace(lower, upper, m)
+        y = black_scholes(x, K, sigma, T)
+        y = np.maximum(0, y)
+        dydx = black_scholes_delta(x, K, sigma, T)
+
+        return x.reshape(-1, 1), y.reshape(-1, 1), dydx.reshape(-1, 1)
+
+    def generate_bachelier_dataset(self, m: int):
+        def genCorrel(n):
+            np.random.seed(8192)
+            randoms = np.random.uniform(low=-1., high=1., size=(2 * n, n))
+            cov = randoms.T @ randoms
+            invvols = np.diag(1. / np.sqrt(np.diagonal(cov)))
+            return np.linalg.multi_dot([invvols, cov, invvols])
+
+        def genWeights(n):
+            np.random.seed(8192)
+            w = np.random.uniform(size=n)
+            return w / w.sum()
+
+        def genVols(n, correl, weights, bkt_vol=20):
+            np.random.seed(8192)
+            vols = np.random.uniform(size=n)
+            weighted_vols = (weights * vols).reshape(-1, 1)
+            v = np.sqrt(np.linalg.multi_dot([weighted_vols.T, correl, weighted_vols]).reshape(1))
+            vols = vols * bkt_vol / v
+            return vols
+
+        n_dim = 15
+        bkt_vol = 20
+        K = 110
+        T = 3
+        lower = 10
+        upper = 200
+        correl = genCorrel(n_dim)
+        weights = genWeights(n_dim)
+        vols = genVols(n_dim, correl, weights, bkt_vol)
+        np.random.seed(8192)
+        s0 = np.random.uniform(low=lower, high=upper, size=(m, n_dim))
+        b0 = np.dot(s0, weights)
+        np.random.seed(8192)
+        wT = np.random.normal(size=(m, n_dim))
+        vT = np.diag(vols) * np.sqrt(T)
+        cov = np.linalg.multi_dot([vT, correl, vT])
+        chol = np.linalg.cholesky(cov)
+        sT = s0 + wT @ chol.T
+        bT = np.dot(sT, weights)
+        pay = np.maximum(0, bT - K)
+        deriv = np.where(bT > K, 1, 0).reshape(-1, 1) * weights.reshape(1, -1)
+        return s0.reshape(-1, n_dim), pay.reshape(-1, 1), deriv.reshape(-1, n_dim)
+
     def generate_step_function_data(
-        self, n_samples: int, key: jax.random.PRNGKey, n_steps: int,
+            self, n_samples: int, key: jax.random.PRNGKey, n_steps: int,
     ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
         step_point_key, step_value_key = jax.random.split(key)
         x = jax.random.uniform(key, shape=(n_samples, self.n_dim))
@@ -94,14 +151,11 @@ class FunctionGenerator:
 
         return x.reshape(-1, self.n_dim), y.reshape(-1, 1), dydx.reshape(-1, self.n_dim)
 
-    def generate_half_step_half_continuous(
-        self, n_samples: int, key: jax.random.PRNGKey, polynomial_degree: int,  alpha: float, frequency: float,
-    ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    def generate_half_step_half_continuous(self, n_samples: int, key: jax.random.PRNGKey, polynomial_degree: int,
+                                           alpha: float, frequency: float) -> Tuple[
+        jnp.ndarray, jnp.ndarray, jnp.ndarray]:
         x = jax.random.uniform(key, shape=(n_samples, self.n_dim))
-        fold_points = jax.random.uniform(
-            key, shape=(self.n_dim,)
-        )  # points where the function folds, where values < fold_points are 0
-        # setting points where x[i][j] < fold_points[j] to 0
+        fold_points = jax.random.uniform(key, shape=(self.n_dim,))
         x = jnp.where(x < fold_points, 0, x)
         y = jnp.zeros(n_samples)
         random_coefficients = self._compute_coefficients_polynomial(key, polynomial_degree)
@@ -118,11 +172,11 @@ class FunctionGenerator:
         return x.reshape(-1, self.n_dim), y.reshape(-1, 1), dydx.reshape(-1, self.n_dim)
 
     def generate_n_datasets(
-        self,
-        n_datasets: int,
-        function_type: Callable[
-            [jax.random.PRNGKey, int], Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]
-        ],
+            self,
+            n_datasets: int,
+            function_type: Callable[
+                [jax.random.PRNGKey, int], Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]
+            ],
     ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]:
         x = []
         y = []

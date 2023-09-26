@@ -55,7 +55,7 @@ def main(vanilla_network: bool, dimensions: int):
         load_if_exists=True,
     )
     objective = build_objective(vanilla_network=vanilla_network, data_generator=f)
-    study.optimize(objective, n_trials=100)
+    study.optimize(objective, n_trials=50)
 
     study.best_params
 

@@ -3,6 +3,7 @@ import unittest
 from functions.function_classes import polynomial_function
 import jax.numpy as jnp
 
+
 class TestFunctionClasses(unittest.TestCase):
     def test_polynomial(self):
         result = polynomial_function(

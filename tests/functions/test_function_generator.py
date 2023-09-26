@@ -67,3 +67,11 @@ class TestFunctionGenerator(unittest.TestCase):
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(x[:, 0], x[:, 1], y)
         plt.show()
+
+    def test_black_scholes_generator(self):
+        generator = FunctionGenerator(n_dim=1)
+        x, y, dydx = generator.generate_black_scholes_dataset(0.2, 110, 2, 200)
+
+        plt.scatter(x, y)
+        plt.scatter(x, dydx, label="dy_dx")
+        plt.show()
