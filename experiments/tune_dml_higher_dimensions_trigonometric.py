@@ -5,6 +5,7 @@ import jax
 import jax.numpy as jnp
 
 import optuna
+import torch.nn
 from optuna import Trial
 
 from functions.function_generator import FunctionGenerator
@@ -20,8 +21,9 @@ def build_objective(vanilla_network: bool, data_generator: Callable, n_datapoint
             lambda_ = 0
         n_layers = trial.suggest_int('n_layers', 1, 5)
         hidden_layer_sizes = trial.suggest_categorical('hidden_layer_sizes', [32, 64, 128, 256])
-        batch_size = 256  # trial.suggest_categorical('batch_size', [64, 128, 256])
+        batch_size = 1024  # trial.suggest_categorical('batch_size', [64, 128, 256])
         n_epochs = 1000  # trial.suggest_categorical('epochs', [200, 500, 1000])
+        activation = trial.suggest_categorical('activation', ['relu', 'sigmoid'])
         test_loss = train(
             data_generator=data_generator,
             n_train=n_train,
@@ -31,6 +33,7 @@ def build_objective(vanilla_network: bool, data_generator: Callable, n_datapoint
             hidden_layer_sizes=hidden_layer_sizes,
             batch_size=batch_size,
             n_epochs=n_epochs,
+            activation_identifier=activation
         )
         return test_loss
     return objective
@@ -43,12 +46,12 @@ def main(vanilla_network: bool, dimensions: int, n_datapoints: int):
         return generator.generate_trigonometric_data(
             n_samples=n_data,
             key=jax.random.PRNGKey(0),
-            #frequencies=jnp.array([5, 3, 1, 1, 0.1, 0.3, 0.1, 0.1, 0.1]),
-            #amplitudes=jnp.array([1, 2, 1, 0.5, 0.1, 0.1, 1, 1, 1]),
+            frequencies=jnp.array([5, 3, 1, 1, 0.1, 0.3, 0.1, 0.1]),
+            amplitudes=jnp.array([1, 2, 1, 0.5, 0.1, 0.1, 1, 1]),
             #frequencies=jnp.array([1, 1, 1, 1, 1, 1, 1, 1, 1]),
             #amplitudes=jnp.array([1, 1, 1, 1, 1, 1, 1, 1, 1]),
-            frequencies=jnp.array([1, 1]),  # jnp.array([5, 3, 1, 1, 0.1, 0.3, 0.1, 0.1, 0.1]),
-            amplitudes=jnp.array([1, 1]),  # jnp.array([1, 2, 1, 0.5, 0.1, 0.1, 1, 1, 1]),
+            #frequencies=jnp.array([1, 1]),  # jnp.array([5, 3, 1, 1, 0.1, 0.3, 0.1, 0.1, 0.1]),
+            #amplitudes=jnp.array([1, 1]),  # jnp.array([1, 2, 1, 0.5, 0.1, 0.1, 1, 1, 1]),
         )
 
     vanilla_indicator = "vanilla" if vanilla_network else "dml"
@@ -68,7 +71,8 @@ if __name__ == "__main__":
     # start main two times in parallel with different arguments
     # one with vanilla_network=True and one with vanilla_network=False
     # Parallel start using threads
-    t1 = threading.Thread(target=main, args=(True, 2, 200))
-    t2 = threading.Thread(target=main, args=(False, 2, 200))
+    # main(True, 2, 2000)
+    t1 = threading.Thread(target=main, args=(True, 8, 512))
+    t2 = threading.Thread(target=main, args=(False, 8, 512))
     t1.start()
     t2.start()
