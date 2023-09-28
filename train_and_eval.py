@@ -4,6 +4,8 @@ from typing import Callable
 
 import jax.random
 
+from differential_ml.pt.modules.DmlDataLoader import SimpleDataLoader
+from differential_ml.pt.modules.device import global_device
 from functions.function_generator import FunctionGenerator
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "differential_ml"))
@@ -46,9 +48,15 @@ def train(
         n_layers: int = 2,
         hidden_layer_sizes: int = 100,
         lambda_: float = 1,
-        activation: Callable = torch.nn.Sigmoid(),
+        activation_identifier: str = 'sigmoid',
         plot_when_finished: bool = True,
 ):
+    if activation_identifier == 'sigmoid':
+        activation = torch.nn.Sigmoid()
+    elif activation_identifier == 'relu':
+        activation = torch.nn.ReLU()
+    else:
+        raise ValueError(f"Activation identifier {activation_identifier} not recognized.")
     x_train, y_train, dydx_train = data_generator(n_train)
     x_test, y_test, dydx_test = data_generator(n_test)
 
@@ -73,9 +81,11 @@ def train(
     shuffle = True  # Set to True if you want to shuffle the data
 
     # Create a DataLoader using the custom dataset
-    dataloader_train = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle)
-    dataloader_valid = DataLoader(validation_set, batch_size=batch_size, shuffle=shuffle)
-    dataloader_test = DataLoader(test_set, batch_size=batch_size, shuffle=shuffle)
+    #dataloader_train = SimpleDataLoader(x_train_normalized, y_train_normalized, dy_dx_train_normalized, batch_size=batch_size, shuffle=shuffle)
+    #dataloader_valid = SimpleDataLoader(x_train_normalized, y_train_normalized, dy_dx_train_normalized, batch_size=batch_size, shuffle=shuffle)
+    dataloader_train = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle, pin_memory=True)
+    dataloader_valid = DataLoader(validation_set, batch_size=batch_size, shuffle=shuffle, pin_memory=True)
+    dataloader_test = DataLoader(test_set, batch_size=batch_size, shuffle=shuffle, pin_memory=True)
 
 
     # Network Architecture
@@ -132,8 +142,8 @@ def train(
 
         outputs_dml = dml_net(inputs)
         test_error_dml += float(MSELoss()(outputs_dml, targets))
-        y_out_test = np.append(y_out_test, normalizer.unscale_y(outputs_dml.detach().numpy()), axis=0)
-        x_test_shuffled = np.append(x_test_shuffled, normalizer.unscale_x(inputs.detach().numpy()), axis=0)
+        y_out_test = np.append(y_out_test, normalizer.unscale_y(outputs_dml.detach().cpu().numpy()), axis=0)
+        x_test_shuffled = np.append(x_test_shuffled, normalizer.unscale_x(inputs.detach().cpu().numpy()), axis=0)
     print('Test Error DML:', test_error_dml)
     if plot_when_finished:
         if x_train.shape[1] == 2:
