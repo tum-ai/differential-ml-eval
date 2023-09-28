@@ -6,12 +6,44 @@ from jax import grad
 from typing import Callable
 from typing import Tuple
 
-from functions.function_classes import polynomial_and_trigonometric_function
+from functions.function_classes import polynomial_and_trigonometric_function, trigonometric_function
 
 
 class FunctionGenerator:
     def __init__(self, n_dim: int):
         self.n_dim = n_dim
+
+    def generate_trigonometric_data(
+            self,
+            n_samples: int,
+            key: jax.random.PRNGKey,
+            frequencies: jnp.ndarray,
+            amplitudes: jnp.ndarray,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        x = self._generate_random_x(key, n_samples)
+        vectorized_trigonometric = jax.vmap(
+            trigonometric_function,
+            in_axes=(0, None, None,),
+        )
+        gradient_vectorized_trigonometric = jax.vmap(
+            jax.jacrev(trigonometric_function, argnums=0),
+            in_axes=(0, None, None,),
+        )
+        y = vectorized_trigonometric(
+            x,
+            frequencies,
+            amplitudes,
+        )
+        dy_dx = gradient_vectorized_trigonometric(
+            x,
+            frequencies,
+            amplitudes,
+        )
+        dy_dx = np.asarray(dy_dx)
+        if len(dy_dx.shape) == 1:
+            dy_dx = dy_dx.reshape(-1, 1)
+        return np.asarray(x), np.asarray(y.reshape(-1, 1)), dy_dx.reshape(dy_dx.shape[0], 1, dy_dx.shape[1])
+
 
     def generate_trigonometric_polynomial_data(
         self, n_samples: int, key: jax.random.PRNGKey, polynomial_degree: int, alpha: float, frequency: float,
@@ -25,12 +57,7 @@ class FunctionGenerator:
         :param frequency: Frequency of the trigonometric function
         :return:
         """
-        x = jax.random.uniform(
-            key,
-            shape=(n_samples, self.n_dim),
-            minval=-1,
-            maxval=1,
-        )
+        x = self._generate_random_x(key, n_samples)
 
         vectorized_polynomial_trigonometric = jax.vmap(
             polynomial_and_trigonometric_function,
@@ -59,6 +86,15 @@ class FunctionGenerator:
 
         return np.asarray(x), np.asarray(y.reshape(-1, 1)), np.asarray(dydx)
 
+    def _generate_random_x(self, key, n_samples):
+        x = jax.random.uniform(
+            key,
+            shape=(n_samples, self.n_dim),
+            minval=-1,
+            maxval=1,
+        )
+        return x
+
     def _compute_coefficients_polynomial(self, key: jax.random.PRNGKey, polynomial_degree: int):
         """
         Compute random coefficients for a polynomial of degree polynomial_degree.
@@ -75,6 +111,7 @@ class FunctionGenerator:
             minval=-1,
             maxval=1,
         ) * jnp.array([0.9 ** i for i in range(polynomial_degree + 1)])
+
         return random_coefficients
 
     def generate_step_function_data(

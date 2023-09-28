@@ -4,7 +4,7 @@ import jax
 from matplotlib import pyplot as plt
 
 from functions.function_generator import FunctionGenerator
-
+import jax.numpy as jnp
 
 class TestFunctionGenerator(unittest.TestCase):
     def test_mixed_1d(self):
@@ -58,7 +58,7 @@ class TestFunctionGenerator(unittest.TestCase):
         x, y, dy_dx = generator.generate_trigonometric_polynomial_data(
             n_samples=10000,
             key=key,
-            polynomial_degree=8,
+            polynomial_degree=4,
             alpha=0.9,
             frequency=2,
         )
@@ -66,4 +66,28 @@ class TestFunctionGenerator(unittest.TestCase):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(x[:, 0], x[:, 1], y)
+        plt.show()
+
+    def test_generate_trigonometric_data_2d(self):
+        generator = FunctionGenerator(n_dim=2)
+        key = jax.random.PRNGKey(1)
+        x, y, dy_dx = generator.generate_trigonometric_data(
+            n_samples=1000,
+            key=key,
+            frequencies=jnp.array([5, 1]),
+            amplitudes=jnp.array([1, 1]),
+        )
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(x[:, 0], x[:, 1], y)
+        plt.show()
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(x[:, 0], x[:, 1], dy_dx[:, 0])
+        plt.show()
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ax.scatter(x[:, 0], x[:, 1], dy_dx[:, 1])
         plt.show()

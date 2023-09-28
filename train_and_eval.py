@@ -46,7 +46,7 @@ def train(
         n_layers: int = 2,
         hidden_layer_sizes: int = 100,
         lambda_: float = 1,
-        activation: Callable = torch.nn.Softmax(-1),
+        activation: Callable = torch.nn.Sigmoid(),
         plot_when_finished: bool = True,
 ):
     x_train, y_train, dydx_train = data_generator(n_train)
@@ -148,20 +148,4 @@ def train(
             plt.scatter(x_test[:, 0], y_test, s=0.1)
             plt.show()
 
-
     return test_error_dml
-
-
-generator = FunctionGenerator(n_dim=2)
-def f(n_data: int):
-    return generator.generate_trigonometric_polynomial_data(
-            n_samples=n_data,
-            key=jax.random.PRNGKey(0),
-            polynomial_degree=8,
-            alpha=0.9,
-            frequency=2,
-        )
-
-train(
-    data_generator=f
-)

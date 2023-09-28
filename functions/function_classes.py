@@ -47,3 +47,25 @@ def polynomial_and_trigonometric_function(
         )
     )
     return result
+
+
+def trigonometric_function(
+        x: jnp.ndarray,
+        frequencies: jnp.ndarray,
+        amplitudes: jnp.ndarray,
+):
+    """
+
+    :param x:
+    :param frequencies:
+    :param amplitudes:
+    :return:
+    """
+    result = jnp.sum(
+        jnp.array(
+            [
+                amplitudes[dim] * jnp.cos(frequencies[dim] * x[dim]) for dim in range(x.shape[0])
+            ]
+        )
+    )
+    return result
