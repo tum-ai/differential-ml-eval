@@ -24,6 +24,7 @@ def build_objective(vanilla_network: bool, data_generator: Callable, n_datapoint
         batch_size = 1024  # trial.suggest_categorical('batch_size', [64, 128, 256])
         n_epochs = 1000  # trial.suggest_categorical('epochs', [200, 500, 1000])
         activation = trial.suggest_categorical('activation', ['relu', 'sigmoid'])
+        regularization_scale = trial.suggest_float('regularization_scale', 0.00001, 1, log=True)
         test_loss = train(
             data_generator=data_generator,
             n_train=n_train,
@@ -33,7 +34,8 @@ def build_objective(vanilla_network: bool, data_generator: Callable, n_datapoint
             hidden_layer_sizes=hidden_layer_sizes,
             batch_size=batch_size,
             n_epochs=n_epochs,
-            activation_identifier=activation
+            activation_identifier=activation,
+            regularization_scale=regularization_scale,
         )
         return test_loss
     return objective
@@ -57,7 +59,7 @@ def main(vanilla_network: bool, dimensions: int, n_datapoints: int):
     vanilla_indicator = "vanilla" if vanilla_network else "dml"
     study = optuna.create_study(
         storage="sqlite:///db.sqlite3",
-        study_name=f"trigonometric-data={n_datapoints}-dimensions={dimensions}-{vanilla_indicator}",
+        study_name=f"reg-trigonometric-data={n_datapoints}-dimensions={dimensions}-{vanilla_indicator}",
         direction="minimize",
         load_if_exists=True,
     )

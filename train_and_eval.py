@@ -50,6 +50,7 @@ def train(
         lambda_: float = 1,
         activation_identifier: str = 'sigmoid',
         plot_when_finished: bool = True,
+        regularization_scale: float = 0.0,
 ):
     if activation_identifier == 'sigmoid':
         activation = torch.nn.Sigmoid()
@@ -101,6 +102,7 @@ def train(
         _lambda=lambda_,  # Weight of differentials in Loss
         _input_dim=normalizer.input_dimension,
         _lambda_j=normalizer.lambda_j,
+        regularization_scale=regularization_scale
     )
     dml_sgd = torch.optim.Adam(lr=lr_dml, params=dml_net.parameters())
     dml_trainer = DmlTrainer(dml_net, dml_loss, optimizer=dml_sgd)
