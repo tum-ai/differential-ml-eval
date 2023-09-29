@@ -51,6 +51,7 @@ def train(
         activation_identifier: str = 'sigmoid',
         plot_when_finished: bool = True,
         regularization_scale: float = 0.0,
+        progress_bar_disabled: bool = False,
 ):
     if activation_identifier == 'sigmoid':
         activation = torch.nn.Sigmoid()
@@ -107,7 +108,7 @@ def train(
     dml_sgd = torch.optim.Adam(lr=lr_dml, params=dml_net.parameters())
     dml_trainer = DmlTrainer(dml_net, dml_loss, optimizer=dml_sgd)
 
-    for epoch in tqdm(range(n_epochs)):
+    for epoch in tqdm(range(n_epochs), disable=progress_bar_disabled):
         pbar_train = tqdm(dataloader_train, disable=True)
         pbar_valid = tqdm(dataloader_valid, disable=True)
         # Train loop
@@ -146,7 +147,6 @@ def train(
         test_error_dml += float(MSELoss()(outputs_dml, targets))
         y_out_test = np.append(y_out_test, normalizer.unscale_y(outputs_dml.detach().cpu().numpy()), axis=0)
         x_test_shuffled = np.append(x_test_shuffled, normalizer.unscale_x(inputs.detach().cpu().numpy()), axis=0)
-    print('Test Error DML:', test_error_dml)
     if plot_when_finished:
         if x_train.shape[1] == 2:
             # 3d scatter
