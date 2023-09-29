@@ -104,7 +104,9 @@ def train(
         _lambda_j=normalizer.lambda_j,
         regularization_scale=regularization_scale
     )
-    dml_sgd = torch.optim.Adam(lr=lr_dml, params=dml_net.parameters())
+    # dml_sgd = torch.optim.Adam(lr=lr_dml, params=dml_net.parameters())
+
+    dml_sgd = torch.optim.LBFGS(lr=lr_dml, params=dml_net.parameters())
     dml_trainer = DmlTrainer(dml_net, dml_loss, optimizer=dml_sgd)
 
     for epoch in tqdm(range(n_epochs)):
