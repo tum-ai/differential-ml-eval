@@ -13,6 +13,7 @@ optuna = "^3.3.0"
 black = "^23.9.1"
 seaborn = "^0.12.2"
 optuna-dashboard = "^0.12.0"
+torch = "^2.0.1"
 
 
 [build-system]
