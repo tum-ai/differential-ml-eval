@@ -6,7 +6,7 @@ from jax import grad
 from typing import Callable
 from typing import Tuple
 
-from functions.function_classes import polynomial_and_trigonometric_function, black_scholes, black_scholes_delta
+from functions.function_classes import polynomial_and_trigonometric_function, black_scholes, black_scholes_delta, Bachelier
 
 
 class FunctionGenerator:
@@ -91,48 +91,17 @@ class FunctionGenerator:
         return x.reshape(-1, 1), y.reshape(-1, 1), dydx.reshape(-1, 1)
 
     def generate_bachelier_dataset(self, m: int):
-        def genCorrel(n):
-            np.random.seed(8192)
-            randoms = np.random.uniform(low=-1., high=1., size=(2 * n, n))
-            cov = randoms.T @ randoms
-            invvols = np.diag(1. / np.sqrt(np.diagonal(cov)))
-            return np.linalg.multi_dot([invvols, cov, invvols])
 
-        def genWeights(n):
-            np.random.seed(8192)
-            w = np.random.uniform(size=n)
-            return w / w.sum()
+        # basket / bachelier dimension
+        basketDim = 20
 
-        def genVols(n, correl, weights, bkt_vol=20):
-            np.random.seed(8192)
-            vols = np.random.uniform(size=n)
-            weighted_vols = (weights * vols).reshape(-1, 1)
-            v = np.sqrt(np.linalg.multi_dot([weighted_vols.T, correl, weighted_vols]).reshape(1))
-            vols = vols * bkt_vol / v
-            return vols
+        # seed
+        simulSeed = np.random.randint(0, 10000)
+        # go
+        generator = Bachelier(basketDim)
+        xTrain, yTrain, dydxTrain = generator.trainingSet(m, seed=simulSeed)
+        return xTrain, yTrain, dydxTrain
 
-        n_dim = 15
-        bkt_vol = 20
-        K = 110
-        T = 3
-        lower = 10
-        upper = 200
-        correl = genCorrel(n_dim)
-        weights = genWeights(n_dim)
-        vols = genVols(n_dim, correl, weights, bkt_vol)
-        np.random.seed(8192)
-        s0 = np.random.uniform(low=lower, high=upper, size=(m, n_dim))
-        b0 = np.dot(s0, weights)
-        np.random.seed(8192)
-        wT = np.random.normal(size=(m, n_dim))
-        vT = np.diag(vols) * np.sqrt(T)
-        cov = np.linalg.multi_dot([vT, correl, vT])
-        chol = np.linalg.cholesky(cov)
-        sT = s0 + wT @ chol.T
-        bT = np.dot(sT, weights)
-        pay = np.maximum(0, bT - K)
-        deriv = np.where(bT > K, 1, 0).reshape(-1, 1) * weights.reshape(1, -1)
-        return s0.reshape(-1, n_dim), pay.reshape(-1, 1), deriv.reshape(-1, n_dim)
 
     def generate_step_function_data(
             self, n_samples: int, key: jax.random.PRNGKey, n_steps: int,

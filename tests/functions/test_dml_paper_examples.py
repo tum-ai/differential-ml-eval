@@ -7,6 +7,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 
 from functions.function_generator import FunctionGenerator
+from functions.function_classes import Bachelier
 from differential_ml.util.data_util import DataNormalizer
 from train_and_eval import train
 
@@ -74,18 +75,18 @@ def test_black_scholes_differential_fit(gen, linreg, ridgereg, normalizer):
     assert diff_loss < linloss and diff_loss < ridgeloss and diff_loss < vanilla_loss
 
 
-def test_bachelier_differential_fit(gen, normalizer):
+def test_bachelier_differential_fit(gen):
     diff_loss = train(
         data_generator=gen.generate_bachelier_dataset,
-        n_train=1000,
-        n_test=5000,
+        n_train=16384,
+        n_test=4096,
         plot_when_finished=True
     )
 
     vanilla_loss = train(
         data_generator=gen.generate_bachelier_dataset,
-        n_train=1000,
-        n_test=5000,
+        n_train=16384,
+        n_test=4096,
         lambda_=0,
         plot_when_finished=True
     )
