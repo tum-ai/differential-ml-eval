@@ -100,7 +100,7 @@ def tune_hyperparameters(vanilla_network: bool, dimensions: int, n_datapoints: i
         )
         #print(f"Running loss computation {vanilla_indicator} = {test_losses / (i + 1)}")
     #print(f"Loss after tuning {identifier} = {test_losses / n_runs} ")
-    json_path = os.path.join(output_dir, f"losses_{identifier}.json")
+    json_path = os.path.join(output_dir, f"losses_{vanilla_indicator}.json")
     json.dump(test_losses, open(json_path, "w"))
 
 
