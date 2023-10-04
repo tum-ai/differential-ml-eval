@@ -1,4 +1,6 @@
+import datetime
 import json
+import os
 import threading
 from typing import Callable
 
@@ -67,10 +69,12 @@ def tune_hyperparameters(vanilla_network: bool, dimensions: int, n_datapoints: i
     study.optimize(objective, n_trials=n_tuning_steps)
 
     print(f"Best value ({vanilla_indicator}): {study.best_params}")
-    json.dump(study.best_params, open(f"best_params_{identifier}.json", "w"))
+    output_dir = f"results/trigonometric-polynomial-{dimensions}dim-{n_datapoints}data"
+    os.makedirs(output_dir, exist_ok=True)
+    json.dump(study.best_params, open(f"{output_dir}/best_params_{identifier}.json", "w"))
 
     n_runs = 10
-    test_loss_sum = 0
+    test_losses = {}
     for i in range(n_runs):
         jax_key = jax.random.PRNGKey(i)
         def f(n_data: int):
@@ -80,7 +84,7 @@ def tune_hyperparameters(vanilla_network: bool, dimensions: int, n_datapoints: i
                 frequencies=jax.random.uniform(key=jax_key, minval=0.1, maxval=10, shape=(n_dimensions,)),
                 amplitudes=jax.random.uniform(key=jax_key, minval=0.1, maxval=10, shape=(n_dimensions,)),
             )
-        test_loss_sum += train(
+        test_losses[i] = train(
             data_generator=f,
             n_train=n_datapoints,
             lr_dml=study.best_params['lr_dml'],
@@ -94,18 +98,20 @@ def tune_hyperparameters(vanilla_network: bool, dimensions: int, n_datapoints: i
             progress_bar_disabled=True,
             plot_when_finished=False,
         )
-        print(f"Running loss computation {vanilla_indicator} = {test_loss_sum / (i + 1)}")
-    print(f"Loss after tuning {identifier} = {test_loss_sum / n_runs} ")
+        #print(f"Running loss computation {vanilla_indicator} = {test_losses / (i + 1)}")
+    #print(f"Loss after tuning {identifier} = {test_losses / n_runs} ")
+    json_path = os.path.join(output_dir, f"losses_{identifier}.json")
+    json.dump(test_losses, open(json_path, "w"))
 
 
 if __name__ == "__main__":
-    n_data_points = 1024
-    n_dimensions = 8
+    n_data_points = 512
+    n_dimensions = 2
     n_tuning_steps = 20
 
     generator = FunctionGenerator(n_dim=n_dimensions)
 
-    def f(n_data: int):
+    def f_trigonometric(n_data: int):
         jax_key = jax.random.PRNGKey(0)
         return generator.generate_trigonometric_data(
             n_samples=n_data,
@@ -113,8 +119,19 @@ if __name__ == "__main__":
             frequencies=jax.random.uniform(key=jax_key, minval=0.1, maxval=10, shape=(n_dimensions,)),
             amplitudes=jax.random.uniform(key=jax_key, minval=0.1, maxval=10, shape=(n_dimensions,)),
         )
-    thread_vanilla = threading.Thread(target=tune_hyperparameters, args=(True, n_dimensions, n_data_points, f, n_tuning_steps))
-    thread_dml = threading.Thread(target=tune_hyperparameters, args=(False, n_dimensions, n_data_points, f, n_tuning_steps))
+
+    def f_trigonometric_and_polynomial(n_data: int):
+        jax_key = jax.random.PRNGKey(0)
+        return generator.generate_trigonometric_polynomial_data(
+            n_samples=n_data,
+            key=jax_key,
+            polynomial_degree=3,
+            alpha=0.9,
+            frequency=2,
+        )
+
+    thread_vanilla = threading.Thread(target=tune_hyperparameters, args=(True, n_dimensions, n_data_points, f_trigonometric_and_polynomial, n_tuning_steps))
+    thread_dml = threading.Thread(target=tune_hyperparameters, args=(False, n_dimensions, n_data_points, f_trigonometric_and_polynomial, n_tuning_steps))
 
     thread_vanilla.start()
     thread_dml.start()
