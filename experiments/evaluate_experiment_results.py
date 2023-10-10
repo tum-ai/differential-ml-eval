@@ -4,44 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def visualize_experiment_results(function_name: str, dimensions: int, n_datapoints: int):
-    with open(f"results/{function_name}-{dimensions}dim-{n_datapoints}data/losses_dml.json", "r") as dml:
-        dml_results = json.load(dml)
-
-    with open(f"results/{function_name}-{dimensions}dim-{n_datapoints}data/losses_vanilla.json", "r") as vanilla:
-        vanilla_results = json.load(vanilla)
-
-    dml_results = np.asarray(list(dml_results.values()))
-    vanilla_results = np.asarray(list(vanilla_results.values()))
-
-    # Convert results to log scale
-    dml_results = np.log(dml_results)
-    vanilla_results = np.log(vanilla_results)
-
-    dml_mean = np.mean(dml_results, axis=0)
-    dml_std = np.std(dml_results, axis=0)
-    vanilla_mean = np.mean(vanilla_results, axis=0)
-    vanilla_std = np.std(vanilla_results, axis=0)
-
-    fig, ax = plt.subplots()
-    ax.bar(
-        x=np.arange(len(dml_results)),
-        height=dml_results,
-        label="DML",
-    )
-    ax.bar(
-        x=np.arange(len(vanilla_results)),
-        height=vanilla_results,
-        label="Vanilla",
-    )
-    ax.set_ylabel("MSE")
-    ax.set_title("Comparison of DML and Vanilla MSEs")
-    ax.legend()
-    plt.show()
-
-
 def visualize_results_across_dimensions(function_name: str, n_datapoints: int):
-    dimensions = [2, 8, 10, 20]
+    dimensions = [2, 8, 10, 20, 100]
     dml_results = {}
     vanilla_results = {}
     for dimension in dimensions:
@@ -65,27 +29,37 @@ def visualize_results_across_dimensions(function_name: str, n_datapoints: int):
 
     # Compare average DML and Vanilla MSEs next to each other across four dimensions
     fig, ax = plt.subplots()
+    bar_width = 0.35
+    x1 = np.arange(len(dimensions))
+    x2 = x1 + bar_width
+
     ax.bar(
-        x=np.arange(len(dimensions)),
+        x=x1,
+        width=bar_width,
         height=[dml_mean[dimension] for dimension in dimensions],
         yerr=[dml_std[dimension] for dimension in dimensions],
+        ecolor="orange",
+        #log=True,
         label="DML",
-        zorder=2,
     )
     ax.bar(
-        x=np.arange(len(dimensions)),
+        x=x2,
+        width=bar_width,
         height=[vanilla_mean[dimension] for dimension in dimensions],
         yerr=[vanilla_std[dimension] for dimension in dimensions],
+        ecolor="blue",
+        #log=True,
         label="Vanilla",
     )
 
     ax.set_ylabel("MSE")
+    ax.set_xlabel("Dimension")
     ax.set_title("Comparison of DML and Vanilla MSEs")
-    ax.set_xticks(np.arange(len(dimensions)))
+    ax.set_xticks(x1 + bar_width / 2)
     ax.set_xticklabels(dimensions)
     ax.legend()
     plt.show()
 
 
 if __name__ == "__main__":
-    visualize_results_across_dimensions(function_name="trigonometric-polynomial", n_datapoints=512)
+    visualize_results_across_dimensions(function_name="trigonometric-polynomial", n_datapoints=1024)

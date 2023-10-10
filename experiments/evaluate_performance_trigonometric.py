@@ -1,15 +1,10 @@
-import datetime
 import json
 import os
 import threading
-from typing import Callable
-
 import jax
-import jax.numpy as jnp
-
 import optuna
-import torch.nn
 from optuna import Trial
+from typing import Callable
 
 from functions.function_generator import FunctionGenerator
 from train_and_eval import train
@@ -54,7 +49,7 @@ def build_objective(
 
 def tune_hyperparameters(vanilla_network: bool, dimensions: int, n_datapoints: int, data_generator: Callable, n_tuning_steps: int):
     vanilla_indicator = "vanilla" if vanilla_network else "dml"
-    identifier = f"systematic-trigonometric-data={n_datapoints}-dimensions={dimensions}-{vanilla_indicator}"
+    identifier = f"{data_generator.__name__}={n_datapoints}-dimensions={dimensions}-{vanilla_indicator}"
     study = optuna.create_study(
         storage="sqlite:///db.sqlite3",
         study_name=identifier,
@@ -69,7 +64,7 @@ def tune_hyperparameters(vanilla_network: bool, dimensions: int, n_datapoints: i
     study.optimize(objective, n_trials=n_tuning_steps)
 
     print(f"Best value ({vanilla_indicator}): {study.best_params}")
-    output_dir = f"results/trigonometric-polynomial-{dimensions}dim-{n_datapoints}data"
+    output_dir = f"results/{data_generator.__name__}-{dimensions}dim-{n_datapoints}data"
     os.makedirs(output_dir, exist_ok=True)
     json.dump(study.best_params, open(f"{output_dir}/best_params_{identifier}.json", "w"))
 
@@ -98,20 +93,19 @@ def tune_hyperparameters(vanilla_network: bool, dimensions: int, n_datapoints: i
             progress_bar_disabled=True,
             plot_when_finished=False,
         )
-        #print(f"Running loss computation {vanilla_indicator} = {test_losses / (i + 1)}")
-    #print(f"Loss after tuning {identifier} = {test_losses / n_runs} ")
+
     json_path = os.path.join(output_dir, f"losses_{vanilla_indicator}.json")
     json.dump(test_losses, open(json_path, "w"))
 
 
 if __name__ == "__main__":
     n_data_points = 512
-    n_dimensions = 2
+    n_dimensions = 100
     n_tuning_steps = 20
 
     generator = FunctionGenerator(n_dim=n_dimensions)
 
-    def f_trigonometric(n_data: int):
+    def trigonometric(n_data: int):
         jax_key = jax.random.PRNGKey(0)
         return generator.generate_trigonometric_data(
             n_samples=n_data,
@@ -120,7 +114,7 @@ if __name__ == "__main__":
             amplitudes=jax.random.uniform(key=jax_key, minval=0.1, maxval=10, shape=(n_dimensions,)),
         )
 
-    def f_trigonometric_and_polynomial(n_data: int):
+    def trigonometric_and_polynomial(n_data: int):
         jax_key = jax.random.PRNGKey(0)
         return generator.generate_trigonometric_polynomial_data(
             n_samples=n_data,
@@ -130,8 +124,8 @@ if __name__ == "__main__":
             frequency=2,
         )
 
-    thread_vanilla = threading.Thread(target=tune_hyperparameters, args=(True, n_dimensions, n_data_points, f_trigonometric_and_polynomial, n_tuning_steps))
-    thread_dml = threading.Thread(target=tune_hyperparameters, args=(False, n_dimensions, n_data_points, f_trigonometric_and_polynomial, n_tuning_steps))
+    thread_vanilla = threading.Thread(target=tune_hyperparameters, args=(True, n_dimensions, n_data_points, trigonometric_and_polynomial, n_tuning_steps))
+    thread_dml = threading.Thread(target=tune_hyperparameters, args=(False, n_dimensions, n_data_points, trigonometric_and_polynomial, n_tuning_steps))
 
     thread_vanilla.start()
     thread_dml.start()
