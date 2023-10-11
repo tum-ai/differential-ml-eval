@@ -1,1 +1,0 @@
-{"lr_dml": 0.009829317341892053, "n_layers": 3, "hidden_layer_sizes": 64, "batch_size": 1024, "epochs": 1000, "activation": "relu", "regularization_scale": 0}

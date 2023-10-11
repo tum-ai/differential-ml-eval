@@ -54,7 +54,7 @@ def visualize_results_across_dimensions(function_name: str, n_datapoints: int):
 
     ax.set_ylabel("MSE")
     ax.set_xlabel("Dimension")
-    ax.set_title("Comparison of DML and Vanilla MSEs")
+    ax.set_title(f"DML and Vanilla MSEs on {n_datapoints} samples")
     ax.set_xticks(x1 + bar_width / 2)
     ax.set_xticklabels(dimensions)
     ax.legend()
@@ -62,4 +62,4 @@ def visualize_results_across_dimensions(function_name: str, n_datapoints: int):
 
 
 if __name__ == "__main__":
-    visualize_results_across_dimensions(function_name="trigonometric-polynomial", n_datapoints=1024)
+    visualize_results_across_dimensions(function_name="trigonometric", n_datapoints=256)

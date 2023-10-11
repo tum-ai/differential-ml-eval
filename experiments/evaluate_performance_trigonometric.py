@@ -99,7 +99,7 @@ def tune_hyperparameters(vanilla_network: bool, dimensions: int, n_datapoints: i
 
 
 if __name__ == "__main__":
-    n_data_points = 512
+    n_data_points = 256
     n_dimensions = 100
     n_tuning_steps = 20
 
