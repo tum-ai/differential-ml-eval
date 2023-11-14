@@ -35,19 +35,21 @@ def visualize_results_across_dimensions(function_name: str, n_datapoints: int):
 
     ax.bar(
         x=x1,
+        color="#151E35",
         width=bar_width,
         height=[dml_mean[dimension] for dimension in dimensions],
         yerr=[dml_std[dimension] for dimension in dimensions],
-        ecolor="orange",
+        ecolor="#A450E6",
         #log=True,
         label="DML",
     )
     ax.bar(
         x=x2,
+        color="#A450E6",
         width=bar_width,
         height=[vanilla_mean[dimension] for dimension in dimensions],
         yerr=[vanilla_std[dimension] for dimension in dimensions],
-        ecolor="blue",
+        ecolor="#151E35",
         #log=True,
         label="Vanilla",
     )
@@ -62,4 +64,4 @@ def visualize_results_across_dimensions(function_name: str, n_datapoints: int):
 
 
 if __name__ == "__main__":
-    visualize_results_across_dimensions(function_name="trigonometric", n_datapoints=256)
+    visualize_results_across_dimensions(function_name="trigonometric_and_polynomial", n_datapoints=256)
