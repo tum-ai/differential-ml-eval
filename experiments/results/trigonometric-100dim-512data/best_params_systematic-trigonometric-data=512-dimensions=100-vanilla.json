@@ -1,0 +1,1 @@
+{"lr_dml": 0.00017593333670853822, "n_layers": 4, "hidden_layer_sizes": 8, "batch_size": 1024, "epochs": 1000, "activation": "sigmoid", "regularization_scale": 0}
