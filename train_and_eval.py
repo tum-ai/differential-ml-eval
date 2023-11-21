@@ -52,6 +52,7 @@ def train(
         plot_when_finished: bool = True,
         regularization_scale: float = 0.0,
         progress_bar_disabled: bool = False,
+        seed = None
 ):
     if activation_identifier == 'sigmoid':
         activation = torch.nn.Sigmoid()
@@ -59,7 +60,7 @@ def train(
         activation = torch.nn.ReLU()
     else:
         raise ValueError(f"Activation identifier {activation_identifier} not recognized.")
-    x_train, y_train, dydx_train = data_generator(n_train)
+    x_train, y_train, dydx_train = data_generator(n_train, seed=seed)
     x_test, y_test, dydx_test = data_generator(n_test)
 
     normalizer = DataNormalizer()
@@ -161,3 +162,118 @@ def train(
             plt.show()
 
     return test_error_dml
+
+def train_only(
+        x_train,
+        y_train,
+        dydx_train,
+        x_test,
+        y_test,
+        dydx_test,
+        n_epochs: int = 100,
+        batch_size: int = 32,
+        lr_dml: float = 0.1,
+        n_layers: int = 2,
+        hidden_layer_sizes: int = 100,
+        lambda_: float = 1,
+        activation_identifier: str = 'sigmoid',
+        regularization_scale: float = 0.0,
+        progress_bar_disabled: bool = False,
+):
+    if activation_identifier == 'sigmoid':
+        activation = torch.nn.Sigmoid()
+    elif activation_identifier == 'relu':
+        activation = torch.nn.ReLU()
+    else:
+        raise ValueError(f"Activation identifier {activation_identifier} not recognized.")
+
+    normalizer = DataNormalizer()
+
+    normalizer.initialize_with_data(x_raw=x_train, y_raw=y_train, dydx_raw=dydx_train)
+    x_train_normalized, y_train_normalized, dy_dx_train_normalized = normalizer.normalize_all(
+        x_train,
+        y_train,
+        dydx_train,
+    )
+    x_test_normalized, y_test_normalized, dydx_test_normalized = normalizer.normalize_all(
+        x_test,
+        y_test,
+        dydx_test,
+    )
+ 
+    dml_dataset = DmlDataset(x_train_normalized, y_train_normalized, dy_dx_train_normalized)
+    test_set = DmlDataset(x_test_normalized, y_test_normalized, dydx_test_normalized)
+    train_size = int(0.8 * len(dml_dataset))
+    valid_size = len(dml_dataset) - train_size
+    train_set, validation_set = torch.utils.data.random_split(dml_dataset, [train_size, valid_size])
+    shuffle = True  # Set to True if you want to shuffle the data
+
+    dataloader_train = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle, pin_memory=True)
+    dataloader_valid = DataLoader(validation_set, batch_size=batch_size, shuffle=shuffle, pin_memory=True)
+    dataloader_test = DataLoader(test_set, batch_size=batch_size, shuffle=shuffle, pin_memory=True)
+
+    # Network Architecture
+    dml_net = DmlFeedForward(
+        normalizer.input_dimension,
+        normalizer.output_dimension,
+        n_layers,
+        hidden_layer_sizes,
+        activation,
+    )
+
+    dml_loss = DmlLoss(
+        _lambda=lambda_,  # Weight of differentials in Loss
+        _input_dim=normalizer.input_dimension,
+        _lambda_j=normalizer.lambda_j,
+        regularization_scale=regularization_scale
+    )
+    dml_sgd = torch.optim.Adam(lr=lr_dml, params=dml_net.parameters())
+    dml_trainer = DmlTrainer(dml_net, dml_loss, optimizer=dml_sgd)
+
+    for epoch in tqdm(range(n_epochs), disable=progress_bar_disabled):
+        pbar_train = tqdm(dataloader_train, disable=True)
+        pbar_valid = tqdm(dataloader_valid, disable=True)
+        # Train loop
+        for batch in pbar_train:
+            inputs = batch['x']  # Access input features
+            targets = batch['y']  # Access target labels
+            gradients = batch['dydx']  # Access dy/dx values
+            step_dml = dml_trainer.step(
+                inputs,
+                targets,
+                gradients,
+            )
+            pbar_train.set_description(f"Train Loss: {step_dml.loss.item()}")
+        with torch.no_grad():
+            valid_error_dml = 0
+            for batch in pbar_valid:
+                inputs = batch['x']  # Access input features
+                targets = batch['y']  # Access target labels
+
+                outputs_dml = dml_net(inputs)
+
+                valid_error_dml += float(MSELoss()(outputs_dml, targets))
+                pbar_train.set_description(f"Validation Loss: {valid_error_dml}")
+
+    dml_net.eval()
+
+    pbar_test = tqdm(dataloader_test, disable=True)
+    test_error_dml = 0
+    y_out_test = np.empty((0, 1))
+    x_test_shuffled = np.empty((0, x_train.shape[1]))
+    for batch in pbar_test:
+        inputs = batch['x']  # Access input features
+        targets = batch['y']  # Access target labels
+
+        outputs_dml = dml_net(inputs)
+        test_error_dml += float(MSELoss()(outputs_dml, targets))
+        y_out_test = np.append(y_out_test, normalizer.unscale_y(outputs_dml.detach().cpu().numpy()), axis=0)
+        x_test_shuffled = np.append(x_test_shuffled, normalizer.unscale_x(inputs.detach().cpu().numpy()), axis=0)
+
+    return {
+        "test_mse" : test_error_dml,
+        "test_set": x_test_shuffled,
+        "test_predictions": outputs_dml,
+        "test_ground_truth": y_out_test
+    }
+
