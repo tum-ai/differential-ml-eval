@@ -211,6 +211,7 @@ if __name__ == "__main__":
 
     
     plt.scatter(x_train, y_train)
+    plt.show()
     res_dml = train_only(x_train, y_train, dydx_train, x_test, y_test, dydx_test)
     res_vanilla = train_only(x_train, y_train, dydx_train, x_test, y_test, dydx_test)
     print("-- done! ---")

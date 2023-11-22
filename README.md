@@ -14,7 +14,7 @@ More information about git submodules: https://devconnected.com/how-to-add-and-u
 
 ### Setting up the virtual environment with Python 3.11.0
 
-Assumes a working installation of [pyenv](https://github.com/pyenv/pyenv) and [poetry](https://github.com/python-poetry/poetry)
+Assumes a working installation of [pyenv](https://github.com/pyenv/pyenv) and [poetry](https://github.com/python-poetry/poetry). Make sure to have poetry version 1.6.1 installed, since newer versions of poetry cause issues in the pyproject.toml file.
 
 ```bash
 pyenv install 3.11.0
