@@ -148,7 +148,7 @@ class Bachelier:
 
 if __name__ == "__main__":
     # basket / bachelier dimension
-    basketDim = 15
+    basketDim = 30
 
     # simulation set sizes to perform
     sizes = [4096, 8192, 16384]
@@ -169,8 +169,8 @@ if __name__ == "__main__":
 
     # go
     bachelier = Bachelier(basketDim)
-    x_train, y_train, dydx_train = bachelier.trainingSet(8192, True, simulSeed)
-    x_test, xAxis, y_test, dydx_test, _ = bachelier.testSet(num=4096, seed=simulSeed)
+    x_train, y_train, dydx_train = bachelier.trainingSet(65536, True, simulSeed)
+    x_test, xAxis, y_test, dydx_test, _ = bachelier.testSet(num=nTest, seed=simulSeed)
 
     dml_x_test, dml_y_test, preds_dml = train_only(x_train, y_train, dydx_train, x_test, y_test, dydx_test, shuffle=False)
     vanilla_x_test, vanilla_y_test, preds_vanilla = train_only(x_train, y_train, dydx_train, x_test, y_test, dydx_test, lambda_=0, shuffle=False)
