@@ -99,9 +99,9 @@ def tune_hyperparameters(vanilla_network: bool, dimensions: int, n_datapoints: i
 
 
 if __name__ == "__main__":
-    n_data_points = 128
-    n_dimensions = 100
-    n_tuning_steps = 20
+    n_data_points = 1024
+    n_dimensions = 1
+    n_tuning_steps = 10
 
     generator = FunctionGenerator(n_dim=n_dimensions)
 
