@@ -2,6 +2,8 @@ import os
 import sys
 from typing import Callable
 
+import pandas as pd
+
 import jax.random
 
 from differential_ml.pt.modules.DmlDataLoader import SimpleDataLoader
@@ -132,6 +134,8 @@ def train(
                 valid_error_dml += float(MSELoss()(outputs_dml, targets))
                 pbar_train.set_description(f"Validation Loss: {valid_error_dml}")
 
+    # save loss dataframe in train_error_files
+    dml_loss.saved_losses.to_csv('../train_error_files/train_error_dml.csv', index=False)
     dml_net.eval()
 
     pbar_test = tqdm(dataloader_test, disable=True)

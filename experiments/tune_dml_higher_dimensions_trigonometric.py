@@ -18,7 +18,7 @@ def build_objective(vanilla_network: bool, data_generator: Callable, n_datapoint
         if not vanilla_network:
             lambda_ = 1  # trial.suggest_float('lambda_', 0.01, 10, log=True)
         else:
-            lambda_ = 0
+            lambda_ = 0.5
         n_layers = trial.suggest_int('n_layers', 1, 5)
         hidden_layer_sizes = trial.suggest_categorical('hidden_layer_sizes', [32, 64, 128, 256])
         batch_size = 1024  # trial.suggest_categorical('batch_size', [64, 128, 256])
