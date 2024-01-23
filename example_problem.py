@@ -30,15 +30,15 @@ def polynomial_and_trigonometric(n):
 
 
 def train(
-        n_train: int = 1000,
+        n_train: int = 32,
         n_test: int = 1000,
-        n_epochs: int = 100,
-        batch_size: int = 32,
-        lr_dml: float = 0.1,
-        n_layers: int = 2,
-        hidden_layer_sizes: int = 100,
+        n_epochs: int = 10000,
+        batch_size: int = 4096,
+        lr_dml: float = 0.00001,
+        n_layers: int = 1,
+        hidden_layer_sizes: int = 1024,
         lambda_: float = 1,
-        activation: Callable = torch.nn.Softmax(-1),
+        activation: Callable = torch.nn.Sigmoid(),
 ):
     x_train, y_train, dydx_train = polynomial_and_trigonometric(n_train)
     x_test, y_test, dydx_test = polynomial_and_trigonometric(n_test)
@@ -86,9 +86,17 @@ def train(
     dml_sgd = torch.optim.Adam(lr=lr_dml, params=dml_net.parameters())
     dml_trainer = DmlTrainer(dml_net, dml_loss, optimizer=dml_sgd)
 
+    losses = {
+        'training_loss_y': [],
+        'training_loss_dydx': [],
+        'validation_loss_y': [],
+        'validation_loss_dydx': []
+    }
     for epoch in tqdm(range(n_epochs)):
         pbar_train = tqdm(dataloader_train, disable=True)
         pbar_valid = tqdm(dataloader_valid, disable=True)
+        train_error = 0
+        train_error_dml = 0
         # Train loop
         for batch in pbar_train:
             inputs = batch['x']  # Access input features
@@ -100,37 +108,66 @@ def train(
                 gradients,
             )
             pbar_train.set_description(f"Train Loss: {step_dml.loss.item()}")
+            train_error += float(MSELoss()(step_dml.y_out, targets))
+            train_error_dml += float(MSELoss()(step_dml.greek_out, gradients))
         with torch.no_grad():
+            valid_error = 0
             valid_error_dml = 0
             for batch in pbar_valid:
                 inputs = batch['x']  # Access input features
                 targets = batch['y']  # Access target labels
-
-                outputs_dml = dml_net(inputs)
-
-                valid_error_dml += float(MSELoss()(outputs_dml, targets))
-                pbar_train.set_description(f"Validation Loss: {valid_error_dml}")
-
+                targets_gradients = batch['dydx']  # Access dy/dx values
+                outputs_dml, outputs_dml_greeks = dml_net.forward_with_greek(inputs)
+                valid_error += float(MSELoss()(outputs_dml, targets))
+                valid_error_dml += float(MSELoss()(outputs_dml_greeks, targets_gradients))
+                pbar_train.set_description(f"Validation Loss: {valid_error}")
+                pbar_train.set_description(f"Validation Loss Differentials: {valid_error_dml}")
+        losses['training_loss_y'].append(train_error)
+        losses['training_loss_dydx'].append(train_error_dml)
+        losses['validation_loss_y'].append(valid_error)
+        losses['validation_loss_dydx'].append(valid_error_dml)
+    # Plotting the losses
+    plt.plot(np.log(losses['training_loss_y']), label='training_loss_y')
+    plt.plot(np.log(losses['training_loss_dydx']), label='training_loss_dydx')
+    plt.plot(np.log(losses['validation_loss_y']), label='validation_loss_y')
+    plt.plot(np.log(losses['validation_loss_dydx']), label='validation_loss_dydx')
+    # Adding labels and title
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Losses')
+    # Adding legend
+    plt.legend()
+    # Saving the figure
+    plt.savefig('loss_figure.png')
+    plt.show()
     dml_net.eval()
 
     pbar_test = tqdm(dataloader_test, disable=True)
     test_error_dml = 0
     y_out_test = np.empty((0, 1))
+    targets_test = np.empty((0, 1))
     x_test_shuffled = np.empty((0, 1))
+    dydx_test_shuffled = np.empty((0, 1))
+    dydx_out_shuffled = np.empty((0, 1))
     for batch in pbar_test:
         inputs = batch['x']  # Access input features
         targets = batch['y']  # Access target labels
+        differentials = batch['dydx']
 
-        outputs_dml = dml_net(inputs)
+        outputs_dml, output_greeks = dml_net.forward_with_greek(inputs)
         test_error_dml += float(MSELoss()(outputs_dml, targets))
         y_out_test = np.append(y_out_test, normalizer.unscale_y(outputs_dml.detach().numpy()), axis=0)
+        targets_test = np.append(targets_test, normalizer.unscale_y(targets.detach().numpy()), axis=0)
         x_test_shuffled = np.append(x_test_shuffled, normalizer.unscale_x(inputs.detach().numpy()), axis=0)
+        dydx_test_shuffled = np.append(dydx_test_shuffled, normalizer.unscale_dy_dx(differentials.detach().reshape(-1, 1).numpy()), axis=0)
+        dydx_out_shuffled = np.append(dydx_out_shuffled, normalizer.unscale_dy_dx(output_greeks.detach().reshape(-1, 1).numpy()), axis=0)
     print('Test Error DML:', test_error_dml)
-    """
-    plt.scatter(x_test_shuffled, y_out_test, s=.1)
-    plt.scatter(x_test, y_test, s=.1)
+    plt.scatter(x_test_shuffled, dydx_test_shuffled, s=.1)
+    plt.scatter(x_test_shuffled, dydx_out_shuffled, s=.1)
+    #plt.scatter(x_test_shuffled, y_out_test)
+    #plt.scatter(x_test_shuffled, targets_test)
+    plt.savefig("dydx_preds")
     plt.show()
-    """
     return test_error_dml
 
 

@@ -148,7 +148,7 @@ class Bachelier:
 
 if __name__ == "__main__":
     # basket / bachelier dimension
-    basketDim = 30
+    basketDim = 1
 
     # simulation set sizes to perform
     sizes = [4096, 8192, 16384]
@@ -169,12 +169,19 @@ if __name__ == "__main__":
 
     # go
     bachelier = Bachelier(basketDim)
-    x_train, y_train, dydx_train = bachelier.trainingSet(65536, True, simulSeed)
-    x_test, xAxis, y_test, dydx_test, _ = bachelier.testSet(num=nTest, seed=simulSeed)
+    x_train, y_train, dydx_train = bachelier.trainingSet(4096, False, simulSeed)
+    x_test, xAxis, y_test, dydx_test, _ = bachelier.testSet(num=1024, seed=simulSeed)
 
-    dml_x_test, dml_y_test, preds_dml = train_only(x_train, y_train, dydx_train, x_test, y_test, dydx_test, shuffle=False)
-    vanilla_x_test, vanilla_y_test, preds_vanilla = train_only(x_train, y_train, dydx_train, x_test, y_test, dydx_test, lambda_=0, shuffle=False)
-    bachelier.compare_pricing_approximation(xAxis, dml_y_test, preds_dml, "DML Fit")
-    bachelier.compare_pricing_approximation(xAxis, vanilla_y_test, preds_vanilla, "Vanilla Fit")
+    #dml_x_test, dml_y_test, preds_dml = train_only(x_train, y_train, dydx_train, x_test, y_test, dydx_test, shuffle=False)
+    #vanilla_x_test, vanilla_y_test, preds_vanilla = train_only(x_train, y_train, dydx_train, x_test, y_test, dydx_test, lambda_=0, shuffle=False)
+    #bachelier.compare_pricing_approximation(xAxis, dml_y_test, preds_dml, "DML Fit")
+    #bachelier.compare_pricing_approximation(xAxis, vanilla_y_test, preds_vanilla, "Vanilla Fit")
+
+    plt.scatter(xAxis, dydx_test, s=.1)
+    plt.scatter(xAxis, y_test, s=.1)
+    # plt.scatter(x_test_shuffled, y_out_test)
+    # plt.scatter(x_test_shuffled, targets_test)
+    plt.savefig("dydx_preds")
+    plt.show()
     print("-- done! ---")
 
